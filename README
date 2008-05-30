@@ -1,0 +1,26 @@
+pyslideshare - http://code.google.com/p/pyslideshare/
+
+Python wrapper for slideshare api
+
+Sample Usage
+
+from pyslideshare import pyslideshare
+
+api_key = '' # Your api key
+secret_key = '' # Your secret key
+
+obj = pyslideshare.pyslideshare(locals(), verbose=True)
+print obj.get_slideshow(slideshow_id=436333)
+List of methods
+
+get_slideshow_by_user
+get_slideshow
+get_slideshow_by_tag
+get_slideshow_by_group
+upload_slideshow
+delete_slideshow
+help(pyslideshare) should explain you the usage
+
+Support
+
+Email me : prabhu at prabhu-s dot com, gtalk : prabhu.subramanian
