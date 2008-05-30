@@ -20,7 +20,14 @@ import mimetools, mimetypes
 import os, stat, time, sha, sys
 from cStringIO import StringIO
 
+import socket
+
 from xml2dict import fromstring
+
+# Sometimes slideshare doesn't response quick enough!
+# timeout in seconds
+timeout = 15
+socket.setdefaulttimeout(timeout)
 
 service_url_dict = {
     'slideshow_by_user' : 'http://www.slideshare.net/api/1/get_slideshow_by_user',
@@ -99,13 +106,29 @@ class MultipartPostHandler(urllib2.BaseHandler):
     
 class pyslideshare:
     
-    def __init__(self, params_dict, verbose=False):
+    def __init__(self, params_dict, verbose=False, proxy=None):
         if 'api_key' not in params_dict or 'secret_key' not in params_dict:
             print >> sys.stderr, 'Both Api key and secret key are required.'
             sys.exit(1)
         self.params = params_dict
         self.verbose = verbose
-    
+        if proxy and not isinstance(proxy, dict):
+            print >> sys.stderr, 'Specify the proxy parameters as a dict!'
+            sys.exit(1)
+        """
+        Proxy - This is a dict with the following keys
+        username, password, host, port
+        """
+        self.proxy = proxy
+        if self.proxy:
+            if not self.proxy['host'] or not self.proxy['port']:
+                print >> sys.stderr, 'Proxy host and port are needed.'
+                sys.exit(1)                
+            if not self.proxy['username']:
+                self.proxy['username'] = ''            
+            if not self.proxy['password']:
+                self.proxy['password'] = ''
+                
     def get_ss_params(self, encode=True, **args):
         """
         Method which returns the parameters required for an api call.
@@ -139,10 +162,20 @@ class pyslideshare:
     
     def make_call(self, service_url, **args):
         """
-        Handy method which prepares slideshare parameters accepting extra parameters, makes service call and returns JSON output
+        Handy method which prepares slideshare parameters accepting extra parameters,
+        makes service call and returns JSON output
         """
+        # Proxy support!
+        if self.proxy:
+            if self.verbose:
+                print 'Using proxy server : ', self.proxy
+            # Urllib2 doesn't support https IMHO. Slideshare thankfully is http
+            proxy_support = urllib2.ProxyHandler({'http': 'http://%(username)s:%(password)s@%(host)s:%(port)s' %self.proxy})
+            proxy_opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
+            urllib2.install_opener(proxy_opener)
+            
         params = self.get_ss_params(**args)
-        data = urllib.urlopen(service_url_dict[service_url], params).read()
+        data = urllib2.urlopen(service_url_dict[service_url], params).read()
         return self.parsexml(data)
 
     def make_auth_call(self, service_url, **args):
@@ -151,6 +184,15 @@ class pyslideshare:
         """
         params = self.get_ss_params(encode=False, **args)
         params['slideshow_srcfile'] = open(args['slideshow_srcfile'], 'rb')        
+        # Proxy support!
+        if self.proxy:
+            if self.verbose:
+                print 'Using proxy server : ', self.proxy
+            # Urllib2 doesn't support https IMHO. Slideshare thankfully is http
+            proxy_support = urllib2.ProxyHandler({'http': 'http://%(username)s:%(password)s@%(host)s:%(port)s' %self.proxy})
+            proxy_opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
+            urllib2.install_opener(proxy_opener)
+
         opener = urllib2.build_opener(MultipartPostHandler) # Use our custom post handler which supports unicode
         data = opener.open(service_url_dict[service_url], params).read()
         return self.parsexml(data)
@@ -250,13 +292,29 @@ def main():
     api_key = ''
     # Slideshare shared secret key
     secret_key = ''
-    obj = pyslideshare(locals(), verbose=True)
+    proxy = None
+    
+    """
+    If you want to use a proxy server, pass a dict like the one below to the constructor.
+    proxy = {
+        'host' : '',
+        'port' : '',
+        'username' : '',
+        'password' : ''
+    }
+    """
+    # Have all the secure keys in a file called localsettings.py
+    try:
+        from localsettings import username, password, api_key, secret_key, proxy
+    except:
+        pass
+    obj = pyslideshare(locals(), verbose=True, proxy=proxy)
     #print obj.get_slideshow_by_user()
 
-    print obj.get_slideshow(slideshow_id=436333)
+    #print obj.get_slideshow(slideshow_id=436333)
     #print obj.get_slideshow_by_group(group_name='friendfeed', limit=2)
-    #print obj.upload_slideshow(username=username, password=password, slideshow_srcfile='test.ppt',
-    #                           slideshow_title='pyslideshare works!')
+    print obj.upload_slideshow(username=username, password=password, slideshow_srcfile='test.ppt',
+                               slideshow_title='pyslideshare works!')
     
 if __name__ == "__main__":
     main()
