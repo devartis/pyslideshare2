@@ -209,6 +209,9 @@ class pyslideshare:
         """
         Method to upload a new slideshow. Since slideshare does batch encoding,
         the value returned will be an id. Use get_slideshow to get the exact status
+        Requires: username, password, slideshow_title, slideshow_srcfile
+        Optional: slideshow_description, slideshow_tags, make_src_public,
+make_slideshow_private, generate_secret_url, allow_embeds, share_with_contacts
         """
         if not username or not password or not slideshow_title or not slideshow_srcfile:
             print >> sys.stderr, 'Required parameters missing.'
