@@ -41,8 +41,6 @@ def fromstring(s):
     t = ET.fromstring(s)
     return object_dict({t.tag: __parse_node(t)})
 
-
-
 if __name__ == '__main__':
     s = """<?xml version="1.0" encoding="utf-8" ?>
     <result>
