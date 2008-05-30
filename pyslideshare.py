@@ -115,6 +115,7 @@ class pyslideshare:
         if proxy and not isinstance(proxy, dict):
             print >> sys.stderr, 'Specify the proxy parameters as a dict!'
             sys.exit(1)
+            
         """
         Proxy - This is a dict with the following keys
         username, password, host, port
@@ -128,7 +129,8 @@ class pyslideshare:
                 self.proxy['username'] = ''            
             if not self.proxy['password']:
                 self.proxy['password'] = ''
-                
+            self.setup_proxy()
+            
     def get_ss_params(self, encode=True, **args):
         """
         Method which returns the parameters required for an api call.
@@ -165,18 +167,10 @@ class pyslideshare:
         Handy method which prepares slideshare parameters accepting extra parameters,
         makes service call and returns JSON output
         """
-        # Proxy support!
-        if self.proxy:
-            if self.verbose:
-                print 'Using proxy server : ', self.proxy
-            # Urllib2 doesn't support https IMHO. Slideshare thankfully is http
-            proxy_support = urllib2.ProxyHandler({'http': 'http://%(username)s:%(password)s@%(host)s:%(port)s' %self.proxy})
-            proxy_opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
-            urllib2.install_opener(proxy_opener)
-            
         params = self.get_ss_params(**args)
         data = urllib2.urlopen(service_url_dict[service_url], params).read()
-        return self.parsexml(data)
+        json = self.parsexml(data)
+        return self.return_data(json)
 
     def make_auth_call(self, service_url, **args):
         """
@@ -184,7 +178,21 @@ class pyslideshare:
         """
         params = self.get_ss_params(encode=False, **args)
         params['slideshow_srcfile'] = open(args['slideshow_srcfile'], 'rb')        
-        # Proxy support!
+        opener = urllib2.build_opener(MultipartPostHandler) # Use our custom post handler which supports unicode
+        data = opener.open(service_url_dict[service_url], params).read()
+        json = self.parsexml(data)
+        return self.return_data(json)
+    
+    def return_data(self, json):
+        """
+        Method to trap slideshare error messages and return data if there are no errors
+        """
+        if json and hasattr(json, 'SlideShareServiceError'):
+            print >> sys.stderr, 'Slideshare returned the following error - %s' %json.SlideShareServiceError.Message
+            return None
+        return json
+
+    def setup_proxy(self):
         if self.proxy:
             if self.verbose:
                 print 'Using proxy server : ', self.proxy
@@ -193,10 +201,98 @@ class pyslideshare:
             proxy_opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
             urllib2.install_opener(proxy_opener)
 
-        opener = urllib2.build_opener(MultipartPostHandler) # Use our custom post handler which supports unicode
-        data = opener.open(service_url_dict[service_url], params).read()
-        return self.parsexml(data)
-    
+    def download_file(self, fetch_url, save_to=None, **args):
+        """
+        Method to download a presentation. Supports download via a proxy!
+        Requires: url
+        Optional: save_to
+        """       
+        # the path and filename to save your cookies in        
+        COOKIEFILE = 'cookies.tmp'
+        user_login = args['username']
+        user_password = args['password']
+        if not user_login or not user_password:
+            print >> sys.stderr, 'Username and password is needed to download.'
+            sys.exit(1)
+        login_params = urllib.urlencode( {'user_login' : user_login,
+                                          'user_password' : user_password
+                                        })
+        LOGIN_URL = 'http://www.slideshare.net/login'
+        cj = None
+        self.do_login_and_fetch(cj, COOKIEFILE, LOGIN_URL, login_params, fetch_url, save_to, **args)
+        
+    def do_login_and_fetch(self, cj, COOKIEFILE, LOGIN_URL, login_params, fetch_url, save_to, **args):
+        """
+        Method to do an automated login and save the cookie. This is required for presentation download.
+        """
+        ClientCookie = None
+        cookielib = None
+        # Properly import the correct cookie lib 
+        try:
+            import cookielib
+        except ImportError:
+            # If importing cookielib fails
+            # let's try ClientCookie
+            try:
+                import ClientCookie
+            except ImportError:
+                # ClientCookie isn't available either
+                urlopen = urllib2.urlopen
+                Request = urllib2.Request
+            else:
+                # imported ClientCookie
+                urlopen = ClientCookie.urlopen
+                Request = ClientCookie.Request
+                cj = ClientCookie.LWPCookieJar()        
+        else:
+            # importing cookielib worked
+            urlopen = urllib2.urlopen
+            Request = urllib2.Request
+            cj = cookielib.LWPCookieJar()
+        
+        if cj is not None:
+            if os.path.isfile(COOKIEFILE):
+                cj.load(COOKIEFILE)        
+            if cookielib is not None:
+                opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+                urllib2.install_opener(opener)        
+            else:
+                opener = ClientCookie.build_opener(ClientCookie.HTTPCookieProcessor(cj))
+                ClientCookie.install_opener(opener)
+                
+        headers =  {'User-agent' : 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'}
+        request = Request(LOGIN_URL, login_params, headers)
+        handle = urlopen(request)
+        if cj:
+            cj.save(COOKIEFILE)        
+        request = Request(fetch_url, None, headers)
+        try:
+            handle = urlopen(request)
+        except urllib2.HTTPError:
+            print >> sys.stderr, 'Presentation not available for download!'
+            return
+        data = handle.read()
+        info = handle.info()
+        ext = 'ppt'
+        type = info['Content-Type']
+        ext = self.get_extension(type)
+        if not save_to:
+            save_to = fetch_url.split('/')[-2] + '.'
+        save_to = save_to + ext
+        fp = open(save_to, 'wb')
+        fp.write(data)
+        fp.close()
+        if self.verbose:
+            print 'Presentation downloaded and saved to %s' %save_to
+            
+    def get_extension(self, type):
+        """
+        Utility Method to return an extension basend on the content type
+        """
+        if type in ['application/pdf', 'application/x-pdf']:
+            return 'pdf'
+        return 'ppt'
+
     ##############################
     # List of api calls supported by slideshare
     ##############################
@@ -283,6 +379,34 @@ make_slideshow_private, generate_secret_url, allow_embeds, share_with_contacts
     # End of list
     ##############################
     
+    ##############################
+    # List of api calls not supported by slideshare!
+    # Caution: These calls make use of scraping and other means to work.
+    ##############################
+    def download_slideshow(self, slideshow_id=None, **args):
+        """
+        Method to download a slideshow, given an id
+        Requires: slideshow_id
+        """
+        download_link = "%(link)s/download"
+        if not slideshow_id:
+            print >> sys.stderr, 'slideshow_id is needed for this call.'
+            sys.exit(1)
+        json = self.get_slideshow(slideshow_id)
+        if not json:
+            print >> sys.stderr, 'Unable to locate the slideshow'
+            return
+        if json.Slideshows.Slideshow.Status != '2':
+            print >> sys.stderr, 'Slideshow not yet available!'
+            return
+        link = json.Slideshows.Slideshow.Permalink
+        download_link = download_link %dict(link=link)
+        self.download_file(download_link, **args)
+        
+    ##############################
+    # End of unsupported list
+    ##############################
+    
 def main():
     # Slideshare username needed for upload
     username = ''
@@ -308,13 +432,14 @@ def main():
         from localsettings import username, password, api_key, secret_key, proxy
     except:
         pass
-    obj = pyslideshare(locals(), verbose=True, proxy=proxy)
+    obj = pyslideshare(locals(), verbose=False)
     #print obj.get_slideshow_by_user()
 
     #print obj.get_slideshow(slideshow_id=436333)
     #print obj.get_slideshow_by_group(group_name='friendfeed', limit=2)
-    print obj.upload_slideshow(username=username, password=password, slideshow_srcfile='test.ppt',
-                               slideshow_title='pyslideshare works!')
+    #print obj.upload_slideshow(username=username, password=password, slideshow_srcfile='test.ppt',
+    #                           slideshow_title='pyslideshare works!')
+    obj.download_slideshow(slideshow_id=438245, username=username, password=password)
     
 if __name__ == "__main__":
     main()
