@@ -1,16 +1,18 @@
-pyslideshare - http://code.google.com/p/pyslideshare/
+pyslideshare2 - https://github.com/gikrauss/pyslideshare2
 
-Python wrapper for slideshare api
+Python wrapper for slideshre API v2
+
+Forked from pyslideshare - http://code.google.com/p/pyslideshare/
 
 Sample Usage
 
-from pyslideshare import pyslideshare
+from pyslideshare2 import pyslideshare
 
 api_key = '' # Your api key
 secret_key = '' # Your secret key
 
-obj = pyslideshare.pyslideshare(locals(), verbose=True)
-print obj.get_slideshow(slideshow_id=436333)
+api = pyslideshare.pyslideshare(locals(), verbose=True)
+print api.get_slideshow(slideshow_id=436333)
 List of methods
 
 get_slideshow_by_user
@@ -23,4 +25,5 @@ help(pyslideshare) should explain you the usage
 
 Support
 
-Email me : prabhu at prabhu-s dot com, gtalk : prabhu.subramanian
+Email me : german at devartis dot com
+
