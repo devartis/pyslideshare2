@@ -4,18 +4,19 @@
 from distutils.core import setup
 
 setup (
-    name = "pyslideshare",
-    description = "Python module for SlideShare",
+    name = "pyslideshare2",
+    description = "Python module for SlideShare v2",
     long_description = """
-Python module for using API offered by SlideShare
+Python module for using API v2 offered by SlideShare
 """,
-    version = "0.2",
+    version = "0.3",
     author = 'Marc Poulhiès',
     author_email = 'dkm@kataplop.net',
     url = "http://code.google.com/p/pyslideshare/",
-    maintainer = 'Marc Poulhiès',
-    maintainer_email = 'dkm@kataplop.net',
+    maintainer = 'Germán Krauss',
+    maintainer_email = 'german@devartis.com',
     license = "GPL,MIT",
-    packages = ['pyslideshare'],
+    packages = ['pyslideshare2'],
     )
+
 
