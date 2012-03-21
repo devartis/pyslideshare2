@@ -25,7 +25,7 @@ Methods
 * get_slideshow_by_group
 * upload_slideshow
 * delete_slideshow
-* help(pyslideshare) should explain you the usage
+help(pyslideshare) should explain you the usage
 
 Support
 -------
