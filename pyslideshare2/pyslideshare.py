@@ -32,12 +32,12 @@ socket.setdefaulttimeout(timeout)
 API_VERSION = 2
 
 service_url_dict = {
-    'slideshow_by_user' : 'http://www.slideshare.net/api/%d/get_slideshow_by_user' % API_VERSION,
-    'get_slideshow' : 'http://www.slideshare.net/api/%d/get_slideshow' % API_VERSION,
-    'slideshow_by_tag' : 'http://www.slideshare.net/api/%d/get_slideshow_by_tag' % API_VERSION,
-    'slideshow_by_group' : 'http://www.slideshare.net/api/%d/get_slideshow_from_group' % API_VERSION,
-    'upload_slideshow' : 'http://www.slideshare.net/api/%d/upload_slideshow' % API_VERSION,
-    'delete_slideshow' : 'http://www.slideshare.net/api/%d/delete_slideshow' % API_VERSION
+    'slideshow_by_user' : 'https://www.slideshare.net/api/%d/get_slideshow_by_user' % API_VERSION,
+    'get_slideshow' : 'https://www.slideshare.net/api/%d/get_slideshow' % API_VERSION,
+    'slideshow_by_tag' : 'https://www.slideshare.net/api/%d/get_slideshow_by_tag' % API_VERSION,
+    'slideshow_by_group' : 'https://www.slideshare.net/api/%d/get_slideshow_from_group' % API_VERSION,
+    'upload_slideshow' : 'https://www.slideshare.net/api/%d/upload_slideshow' % API_VERSION,
+    'delete_slideshow' : 'https://www.slideshare.net/api/%d/delete_slideshow' % API_VERSION
 }
 
 class Callable:
