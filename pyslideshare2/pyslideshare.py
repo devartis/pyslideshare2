@@ -182,9 +182,10 @@ class pyslideshare:
         Simillar to make_call, except this does authentication first. Needed for upload
         """
         params = self.get_ss_params(encode=False, **args)
-        params['slideshow_srcfile'] = open(args['slideshow_srcfile'], 'rb')        
-        opener = urllib2.build_opener(MultipartPostHandler) # Use our custom post handler which supports unicode
+        if args['slideshow_srcfile']:
+            params['slideshow_srcfile'] = open(args['slideshow_srcfile'], 'rb')
         data = opener.open(service_url_dict[service_url], params).read()
+        opener = urllib2.build_opener(MultipartPostHandler) # Use our custom post handler which supports unicode
         json = self.parsexml(data)
         return self.return_data(json)
 
@@ -346,7 +347,7 @@ class pyslideshare:
         return self.make_call('slideshow_by_group', group_name=group_name, offset=offset, limit=limit)
 
     def upload_slideshow(self, username=None, password=None,
-                         slideshow_title=None, slideshow_srcfile=None, slideshow_description=None,
+                         slideshow_title=None, slideshow_srcfile=None, upload_url=None, slideshow_description=None,
                          slideshow_tags=None, make_src_public='Y', make_slideshow_private='N',
                          generate_secret_url='N', allow_embeds='Y', share_with_contacts='Y'):
         """
@@ -356,19 +357,22 @@ class pyslideshare:
         Optional: slideshow_description, slideshow_tags, make_src_public,
 make_slideshow_private, generate_secret_url, allow_embeds, share_with_contacts
         """
-        if not username or not password or not slideshow_title or not slideshow_srcfile:
+        if not username or not password or not slideshow_title or not (slideshow_srcfile or upload_url):
             print >> sys.stderr, 'Required parameters missing.'
             sys.exit(1)
-        if not os.path.exists(slideshow_srcfile):
+        if slideshow_srcfile and not os.path.exists(slideshow_srcfile):
             print >> sys.stderr, 'File to be uploaded missing.'
             sys.exit(1)
 
-        return self.make_auth_call('upload_slideshow', username=username, password=password,
-                              slideshow_title=slideshow_title, slideshow_srcfile=slideshow_srcfile,
-                              slideshow_description=slideshow_description, slideshow_tags=slideshow_tags,
-                              make_src_public=make_src_public, make_slideshow_private=make_slideshow_private,
-                              generate_secret_url=generate_secret_url, allow_embeds=allow_embeds,
-                              share_with_contacts=share_with_contacts)
+        method = self.make_auth_call if slideshow_srcfile else self.make_call
+
+        return method('upload_slideshow', username=username, password=password,
+                      slideshow_title=slideshow_title, slideshow_srcfile=slideshow_srcfile,
+                      upload_url=upload_url,
+                      slideshow_description=slideshow_description, slideshow_tags=slideshow_tags,
+                      make_src_public=make_src_public, make_slideshow_private=make_slideshow_private,
+                      generate_secret_url=generate_secret_url, allow_embeds=allow_embeds,
+                      share_with_contacts=share_with_contacts)
 
     def delete_slideshow(self, slideshow_id=None):
         """
@@ -449,4 +453,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
