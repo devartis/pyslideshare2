@@ -142,7 +142,7 @@ class pyslideshare:
         tmp_params_dict = {
                         'api_key' : self.params['api_key'],
                         'ts' : ts,
-                        'hash' : sha1.new(self.params['secret_key'] + str(ts)).hexdigest()
+                        'hash' : sha1(self.params['secret_key'] + str(ts)).hexdigest()
         }
         # Add method specific parameters to the dict.
         for arg in args:
